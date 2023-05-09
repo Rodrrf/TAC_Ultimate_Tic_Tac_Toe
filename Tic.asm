@@ -228,7 +228,7 @@ CICLO:
 		mov		bh,0		; numero da página
 		int		10h			; Read Character and Attribute at Cursor Position
 		mov		Car2, al		; Guarda o Caracter que está na posição do Cursor
-		;mov		Cor, ah		; Guarda a cor que está na posição do Cursor
+		mov		Cor, ah		; Guarda a cor que está na posição do Cursor
 		
 LER_SETA:	
 		call 	LE_TECLA_MENU
@@ -263,12 +263,12 @@ BAIXO:	cmp		al,50h
 		inc 	POSy
 		inc 	POSy
 		inc 	POSy
-		cmp 	POSy, 18
+		cmp 	POSy, 13
 		jae		RETURNDOWN
 		jmp		CICLO
 
 RETURNDOWN: 						;Não sai por cima do tabuleiro
-		mov POSy, 13
+		mov POSy, 8
 		jmp CICLO
 
 
@@ -276,8 +276,6 @@ ASSINALA:
 		cmp POSy, 3
 		je 		fim
 		cmp POSy, 8
-		je		SAIR
-		cmp POSy, 13
 		je		SAIR
 		jmp		CICLO
 
@@ -301,19 +299,19 @@ AVATAR	PROC
 			mov		ax,0B800h
 			mov		es,ax
 CICLO:			
-			goto_xy	POSx,POSy		; Vai para nova possi��o
+			goto_xy	POSx,POSy		; Vai para nova possição
 			mov 	ah, 08h
-			mov		bh,0			; numero da p�gina
+			mov		bh,0			; numero da página
 			int		10h		
-			mov		Car, al			; Guarda o Caracter que est� na posi��o do Cursor
-			mov		Cor, ah			; Guarda a cor que est� na posi��o do Cursor
+			mov		Car, al			; Guarda o Caracter que está na posição do Cursor
+			mov		Cor, ah			; Guarda a cor que está na posição do Cursor
 		
-			goto_xy	78,0			; Mostra o caractr que estava na posi��o do AVATAR
-			mov		ah, 02h			; IMPRIME caracter da posi��o no canto
+			goto_xy	78,0			; Mostra o caractr que estava na posição do AVATAR
+			mov		ah, 02h			; IMPRIME caracter da posição no canto
 			mov		dl, Car	
 			int		21H			
 	
-			goto_xy	POSx,POSy	; Vai para posi��o do cursor
+			goto_xy	POSx,POSy	; Vai para posição do cursor
 		
 LER_SETA:	call 	LE_TECLA
 			cmp		ah, 1
@@ -322,7 +320,7 @@ LER_SETA:	call 	LE_TECLA
 			JE		FIM
 			goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
 			mov		CL, Car
-			cmp		CL, 32		; S� escreve se for espa�o em branco
+			cmp		CL, 32		; Só escreve se for espaço em branco
 			JNE 	LER_SETA
 			mov		ah, 02h		; coloca o caracter lido no ecra
 			mov		dl, al
@@ -359,6 +357,7 @@ fim:
 AVATAR		endp
 
 
+
 ;########################################################################
 Main  proc
 		mov			ax, dseg
@@ -372,7 +371,7 @@ Main  proc
 		call 		IMP_MENU
 		call		assinala_Menu
 		call 		apaga_ecran
-		goto_xy	0,0
+		goto_xy		0,0
 		call		IMP_FICH
 		call 		AVATAR
 		goto_xy		0,22
