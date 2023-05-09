@@ -3,7 +3,7 @@
 ;   
 ;	ANO LECTIVO 2022/2023
 ;--------------------------------------------------------------
-; Demostração da navegação do cursor do Ecran 
+; Demostraï¿½ï¿½o da navegaï¿½ï¿½o do cursor do Ecran 
 ;
 ;		arrow keys to move 
 ;		press ESC to exit
@@ -22,14 +22,18 @@ dseg	segment para public 'data'
         Erro_Ler_Msg    db      'Erro ao tentar ler do ficheiro$'
         Erro_Close      db      'Erro ao tentar fechar o ficheiro$'
         Fich         	db      'jogo.TXT',0
+		FichMenu		db 		'menu.TXT', 0
         HandleFich      dw      0
+		HandleMenu		dw		0
+		car_menu		db 		0
         car_fich        db      ?
 
 
 		Car				db	32	; Guarda um caracter do Ecran 
+		Car2 			db 	32  ; Guarda um caracter do Ecran 
 		Cor				db	7	; Guarda os atributos de cor do caracter
-		POSy			db	3	; a linha pode ir de [1 .. 25]
-		POSx			db	3	; POSx pode ir [1..80]	
+		POSy			db	1	; a linha pode ir de [1 .. 25]
+		POSx			db	2	; POSx pode ir [1..80]	
 
 dseg	ends
 
@@ -41,7 +45,7 @@ assume		cs:cseg, ds:dseg
 ;########################################################################
 goto_xy	macro		POSx,POSy
 		mov		ah,02h
-		mov		bh,0		; numero da página
+		mov		bh,0		; numero da pï¿½gina
 		mov		dl,POSx
 		mov		dh,POSy
 		int		10h
@@ -49,6 +53,7 @@ endm
 
 
 ;ROTINA PARA APAGAR ECRAN
+
 
 apaga_ecran	proc
 			mov		ax,0B800h
@@ -63,6 +68,60 @@ apaga:		mov		byte ptr es:[bx],' '
 			loop	apaga
 			ret
 apaga_ecran	endp
+
+
+;########################################################################
+; IMP_MENU
+
+IMP_MENU	PROC
+
+		;abre ficheiro
+        mov     ah,3dh
+        mov     al,0
+        lea     dx,FichMenu
+        int     21h
+        jc      erro_abrir
+        mov     HandleMenu,ax
+        jmp     ler_ciclo
+
+erro_abrir:
+        mov     ah,09h
+        lea     dx,Erro_Open
+        int     21h
+        jmp     sai_m
+
+ler_ciclo:
+        mov     ah,3fh
+        mov     bx,HandleMenu
+        mov     cx,1
+        lea     dx,car_menu
+        int     21h
+		jc		erro_ler
+		cmp		ax,0		;EOF?
+		je		fecha_ficheiro
+        mov     ah,02h
+		mov		dl,car_menu
+		int		21h
+		jmp		ler_ciclo
+
+erro_ler:
+        mov     ah,09h
+        lea     dx,Erro_Ler_Msg
+        int     21h
+
+fecha_ficheiro:
+        mov     ah,3eh
+        mov     bx,HandleMenu
+        int     21h
+        jnc     sai_m
+
+        mov     ah,09h
+        lea     dx,Erro_Close
+        Int     21h
+sai_m:	
+		RET
+		
+IMP_MENU	endp
 
 
 ;########################################################################
@@ -116,7 +175,8 @@ fecha_ficheiro:
 sai_f:	
 		RET
 		
-IMP_FICH	endp		
+IMP_FICH	endp	
+	
 
 
 ;########################################################################
@@ -135,6 +195,103 @@ LE_TECLA	PROC
 SAI_TECLA:	RET
 LE_TECLA	endp
 
+LE_TECLA_MENU PROC
+		MOV	ah,08H
+		INT	21H
+		MOV	ah,0
+		CMP	al,0
+		JNE	SAI_TECLA
+		MOV	ah, 08H
+		INT	21H
+		MOV	ah,1
+SAI_TECLA:	
+		RET
+LE_TECLA_MENU	ENDP
+
+
+;########################################################################
+; Assinala caracter no menu no ecran	
+
+assinala_Menu	PROC
+		mov POSx, 29
+		mov POSy, 3
+
+CICLO:	
+		; goto_xy	POSxa,POSya	; Vai para a posiÃ§Ã£o anterior do cursor
+		; mov		ah, 02h
+		; mov		dl, Car	; Repoe Caracter guardado 
+		; int		21H		
+		
+		
+		goto_xy	POSx,POSy	; Vai para nova posiÃ§Ã£o
+		mov 	ah, 08h
+		mov		bh,0		; numero da pÃ¡gina
+		int		10h			; Read Character and Attribute at Cursor Position
+		mov		Car2, al		; Guarda o Caracter que estÃ¡ na posiÃ§Ã£o do Cursor
+		;mov		Cor, ah		; Guarda a cor que estÃ¡ na posiÃ§Ã£o do Cursor
+		
+LER_SETA:	
+		call 	LE_TECLA_MENU
+		cmp		ah, 1
+		je		ESTEND
+		
+		CMP 	AL, 27	; ESCAPE
+		JE		FIM
+		CMP		AL, 13  ; ENTER
+		je		ASSINALA
+		jmp		LER_SETA
+		
+ESTEND:	cmp 	al,48h
+		jne		BAIXO
+		dec		POSy		;cima
+		dec		POSy
+		dec		POSy
+		dec		POSy
+		dec		POSy
+		cmp 	POSy, -2
+		jbe		RETURNUP
+		jmp		CICLO
+
+RETURNUP: 						;NÃ£o sai por cima do tabuleiro
+		mov POSy, 3
+		jmp CICLO
+
+BAIXO:	cmp		al,50h
+		jne		LER_SETA 		;Ã‰ sÃ³ para andar para cima e para baixo
+		inc 	POSy		;Baixo
+		inc 	POSy
+		inc 	POSy
+		inc 	POSy
+		inc 	POSy
+		cmp 	POSy, 18
+		jae		RETURNDOWN
+		jmp		CICLO
+
+RETURNDOWN: 						;NÃ£o sai por cima do tabuleiro
+		mov POSy, 13
+		jmp CICLO
+
+
+ASSINALA:
+		cmp POSy, 3
+		je 		fim
+		cmp POSy, 8
+		je		SAIR
+		cmp POSy, 13
+		je		SAIR
+		jmp		CICLO
+
+SAIR:
+		call 	apaga_ecran
+		goto_xy	0,0
+		mov     ah,4ch
+        int     21h
+
+fim:	
+		RET
+assinala_Menu	endp
+;########################################################################
+
 
 
 ;########################################################################
@@ -144,19 +301,19 @@ AVATAR	PROC
 			mov		ax,0B800h
 			mov		es,ax
 CICLO:			
-			goto_xy	POSx,POSy		; Vai para nova possição
+			goto_xy	POSx,POSy		; Vai para nova possiï¿½ï¿½o
 			mov 	ah, 08h
-			mov		bh,0			; numero da página
+			mov		bh,0			; numero da pï¿½gina
 			int		10h		
-			mov		Car, al			; Guarda o Caracter que está na posição do Cursor
-			mov		Cor, ah			; Guarda a cor que está na posição do Cursor
+			mov		Car, al			; Guarda o Caracter que estï¿½ na posiï¿½ï¿½o do Cursor
+			mov		Cor, ah			; Guarda a cor que estï¿½ na posiï¿½ï¿½o do Cursor
 		
-			goto_xy	78,0			; Mostra o caractr que estava na posição do AVATAR
-			mov		ah, 02h			; IMPRIME caracter da posição no canto
+			goto_xy	78,0			; Mostra o caractr que estava na posiï¿½ï¿½o do AVATAR
+			mov		ah, 02h			; IMPRIME caracter da posiï¿½ï¿½o no canto
 			mov		dl, Car	
 			int		21H			
 	
-			goto_xy	POSx,POSy	; Vai para posição do cursor
+			goto_xy	POSx,POSy	; Vai para posiï¿½ï¿½o do cursor
 		
 LER_SETA:	call 	LE_TECLA
 			cmp		ah, 1
@@ -165,7 +322,7 @@ LER_SETA:	call 	LE_TECLA
 			JE		FIM
 			goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
 			mov		CL, Car
-			cmp		CL, 32		; Só escreve se for espaço em branco
+			cmp		CL, 32		; Sï¿½ escreve se for espaï¿½o em branco
 			JNE 	LER_SETA
 			mov		ah, 02h		; coloca o caracter lido no ecra
 			mov		dl, al
@@ -212,6 +369,10 @@ Main  proc
 		
 		call		apaga_ecran
 		goto_xy		0,0
+		call 		IMP_MENU
+		call		assinala_Menu
+		call 		apaga_ecran
+		goto_xy	0,0
 		call		IMP_FICH
 		call 		AVATAR
 		goto_xy		0,22
