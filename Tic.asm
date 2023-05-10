@@ -22,10 +22,13 @@ dseg	segment para public 'data'
         Erro_Ler_Msg    db      'Erro ao tentar ler do ficheiro$'
         Erro_Close      db      'Erro ao tentar fechar o ficheiro$'
         Fich         	db      'jogo.TXT',0
+		FichNome		db		'nomes.TXT',0
 		FichMenu		db 		'menu.TXT', 0
         HandleFich      dw      0
+		HandleNome      dw      0
 		HandleMenu		dw		0
 		car_menu		db 		0
+		car_nome		db 		0
         car_fich        db      ?
 
 
@@ -68,6 +71,102 @@ apaga:		mov		byte ptr es:[bx],' '
 			loop	apaga
 			ret
 apaga_ecran	endp
+
+
+;#############################################################################
+;ROTINA PARA MUDAR COR
+
+cor_x	proc
+		xor		bx,bx
+		mov		cx,25*80
+		
+muda:	
+		mov al, es:[bx]
+		cmp al,'X'
+		jne next
+		mov		byte ptr es:[bx+1],4   ;AQUI COLOCAS A COR DOS X!!!!!!!!
+next:	
+		inc bx
+		inc bx
+		loop 	muda
+fim:
+		ret
+		
+cor_x	endp
+
+
+cor_o	proc
+		xor		bx,bx
+		mov		cx,25*80
+		
+muda:	
+		mov al, es:[bx]
+		cmp al,'O'
+		jne next
+		mov		byte ptr es:[bx+1],3   ;AQUI COLOCAS A COR DOS X!!!!!!!!
+next:	
+		inc bx
+		inc bx
+		loop 	muda
+fim:
+		ret
+		
+cor_o	endp
+
+;########################################################################
+
+;########################################################################
+; IMP_NOMES
+
+IMP_NOMES	PROC
+
+		;abre ficheiro
+        mov     ah,3dh
+        mov     al,0
+        lea     dx,FichNome
+        int     21h
+        jc      erro_abrir
+        mov     HandleNome,ax
+        jmp     ler_ciclo
+
+erro_abrir:
+        mov     ah,09h
+        lea     dx,Erro_Open
+        int     21h
+        jmp     sai_m
+
+ler_ciclo:
+        mov     ah,3fh
+        mov     bx,HandleNome
+        mov     cx,1
+        lea     dx,car_nome
+        int     21h
+		jc		erro_ler
+		cmp		ax,0		;EOF?
+		je		fecha_ficheiro
+        mov     ah,02h
+		mov		dl,car_nome
+		int		21h
+		jmp		ler_ciclo
+
+erro_ler:
+        mov     ah,09h
+        lea     dx,Erro_Ler_Msg
+        int     21h
+
+fecha_ficheiro:
+        mov     ah,3eh
+        mov     bx,HandleNome
+        int     21h
+        jnc     sai_m
+
+        mov     ah,09h
+        lea     dx,Erro_Close
+        Int     21h
+sai_m:	
+		RET
+		
+IMP_NOMES	endp
 
 
 ;########################################################################
@@ -291,6 +390,84 @@ assinala_Menu	endp
 ;########################################################################
 
 
+;########################################################################
+; Assinala caracter no menu no ecran	
+
+assinala_Nomes	PROC
+		mov POSx, 18
+		mov POSy, 3
+
+CICLO:	
+		; goto_xy	POSxa,POSya	; Vai para a posição anterior do cursor
+		; mov		ah, 02h
+		; mov		dl, Car	; Repoe Caracter guardado 
+		; int		21H		
+		
+		
+		goto_xy	POSx,POSy	; Vai para nova posição
+		mov 	ah, 08h
+		mov		bh,0		; numero da página
+		int		10h			; Read Character and Attribute at Cursor Position
+		mov		Car2, al		; Guarda o Caracter que está na posição do Cursor
+		mov		Cor, ah		; Guarda a cor que está na posição do Cursor
+		
+LER_SETA:	
+		call 	LE_TECLA_MENU
+		cmp		ah, 1
+		je		ESTEND
+		
+		CMP 	AL, 27	; ESCAPE
+		JE		FIM
+		CMP		AL, 13  ; ENTER
+		je		ASSINALA
+		jmp		LER_SETA
+		
+ESTEND:	cmp 	al,48h
+		jne		BAIXO
+		dec		POSy		;cima
+		dec		POSy
+		cmp 	POSy, 7
+		jbe		RETURNUP
+		jmp		CICLO
+
+RETURNUP: 						;Não sai por cima do tabuleiro
+		mov POSy, 3
+		mov POSx, 18
+		jmp CICLO
+
+BAIXO:	cmp		al,50h
+		jne		LER_SETA 		;É só para andar para cima e para baixo
+		inc 	POSy		;Baixo
+		inc 	POSy
+		cmp 	POSy, 7
+		jae		RETURNDOWN
+		jmp		CICLO
+
+RETURNDOWN: 						;Não sai por cima do tabuleiro
+		mov POSy, 7
+		mov POSx, 28
+		jmp CICLO
+
+
+ASSINALA:
+		cmp POSy, 7
+		je 		fim
+		cmp POSy, 28
+		je		SAIR
+		jmp		CICLO
+
+SAIR:
+		call 	apaga_ecran
+		goto_xy	0,0
+		mov     ah,4ch
+        int     21h
+
+fim:	
+		RET
+assinala_Nomes	endp
+;########################################################################
+
+
 
 ;########################################################################
 ; Avatar
@@ -329,6 +506,7 @@ LER_SETA:	call 	LE_TECLA
 			
 			
 			jmp		LER_SETA
+	
 		
 ESTEND:		cmp 	al,48h
 			jne		BAIXO
@@ -336,7 +514,7 @@ ESTEND:		cmp 	al,48h
 			jmp		CICLO
 
 BAIXO:		cmp		al,50h
-			jne		ESQUERDA
+			jne		ESQUERDA	
 			inc 	POSy		;Baixo
 			jmp		CICLO
 
@@ -357,7 +535,6 @@ fim:
 AVATAR		endp
 
 
-
 ;########################################################################
 Main  proc
 		mov			ax, dseg
@@ -372,7 +549,13 @@ Main  proc
 		call		assinala_Menu
 		call 		apaga_ecran
 		goto_xy		0,0
+		call 		IMP_NOMES
+		call		assinala_Nomes
+		call 		apaga_ecran
+		goto_xy		0,0
 		call		IMP_FICH
+		call 		cor_o
+		call 		cor_x
 		call 		AVATAR
 		goto_xy		0,22
 		
