@@ -34,9 +34,13 @@ dseg	segment para public 'data'
 
 		Car				db	32	; Guarda um caracter do Ecran 
 		Car2 			db 	32  ; Guarda um caracter do Ecran 
+		Car3 			db 	32  ; Guarda um caracter do Ecran
 		Cor				db	7	; Guarda os atributos de cor do caracter
 		POSy			db	1	; a linha pode ir de [1 .. 25]
 		POSx			db	2	; POSx pode ir [1..80]	
+
+		nomeJ1			db 		? ; Guarda o nome do jogador 1
+		nomeJ2			db		? ; Guarda o nome do jogador 2
 
 dseg	ends
 
@@ -48,7 +52,7 @@ assume		cs:cseg, ds:dseg
 ;########################################################################
 goto_xy	macro		POSx,POSy
 		mov		ah,02h
-		mov		bh,0		; numero da p�gina
+		mov		bh,0		; numero da pagina
 		mov		dl,POSx
 		mov		dh,POSy
 		int		10h
@@ -103,7 +107,7 @@ muda:
 		mov al, es:[bx]
 		cmp al,'O'
 		jne next
-		mov		byte ptr es:[bx+1],3   ;AQUI COLOCAS A COR DOS X!!!!!!!!
+		mov		byte ptr es:[bx+1],3   ;AQUI COLOCAS A COR DOS 0!!!!!!!!
 next:	
 		inc bx
 		inc bx
@@ -113,6 +117,35 @@ fim:
 		
 cor_o	endp
 
+cor_nome_jogador proc
+		 mov 	si, 240 	; origem(01,40)	
+
+ciclo:
+		mov al,es:[si] ; le caracter
+		cmp al, ' '
+		je fim
+		mov		byte ptr es:[si+1],7 
+		inc si
+		inc si
+		loop ciclo 
+fim: 
+	ret
+cor_nome_jogador endp
+
+cor_espetador proc
+mov 	si, 400 	; origem(02,40)	
+
+ciclo:
+		mov al,es:[si] ; le caracter
+		cmp al, ' '
+		je fim
+		mov		byte ptr es:[si+1],8	 
+		inc si
+		inc si
+		loop ciclo 
+fim: 
+	ret
+cor_espetador endp
 ;########################################################################
 
 ;########################################################################
@@ -302,10 +335,28 @@ LE_TECLA_MENU PROC
 		JNE	SAI_TECLA
 		MOV	ah, 08H
 		INT	21H
-		MOV	ah,1
+		MOV ah, 1
+
 SAI_TECLA:	
 		RET
 LE_TECLA_MENU	ENDP
+
+
+LE_TECLADO_MENU PROC
+		MOV	ah,08H
+		INT	21H
+		MOV	ah,0
+		CMP	al,0
+		JNE	SAI_TECLA
+		MOV	ah, 08H
+		INT	21H
+		MOV	ah, 02h
+		MOV dl, al
+		int 21h
+
+SAI_TECLA:	
+		RET
+LE_TECLADO_MENU	ENDP
 
 
 ;########################################################################
@@ -398,17 +449,17 @@ assinala_Nomes	PROC
 		mov POSy, 3
 
 CICLO:	
-		; goto_xy	POSxa,POSya	; Vai para a posição anterior do cursor
-		; mov		ah, 02h
-		; mov		dl, Car	; Repoe Caracter guardado 
-		; int		21H		
+		 goto_xy	18,3	; Vai para a posição anterior do cursor
+		 mov		ah, 02h
+		 mov		dl, Car3	; Repoe Caracter guardado 
+		 int		21H		
 		
 		
 		goto_xy	POSx,POSy	; Vai para nova posição
 		mov 	ah, 08h
 		mov		bh,0		; numero da página
 		int		10h			; Read Character and Attribute at Cursor Position
-		mov		Car2, al		; Guarda o Caracter que está na posição do Cursor
+		mov		Car3, al		; Guarda o Caracter que está na posição do Cursor
 		mov		Cor, ah		; Guarda a cor que está na posição do Cursor
 		
 LER_SETA:	
@@ -416,12 +467,45 @@ LER_SETA:
 		cmp		ah, 1
 		je		ESTEND
 		
-		CMP 	AL, 27	; ESCAPE
-		JE		FIM
+		
 		CMP		AL, 13  ; ENTER
 		je		ASSINALA
+		goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
+		mov		CL, Car3
+		;cmp		CL, 32		; Só escreve se for espaço em branco
+		;JNE 	LER_SETA
+		mov		ah, 02h		; coloca o caracter lido no ecra
+		mov		dl, al
+		int		21H	
+		CMP 	al, 8h		; CARACTER DE APAGAR
+		JE		APAGA_CAR
+		CMP 	POSX, 45
+		JNGE	INC_POSX
+		;CMP 	POSY, 3
+		;JNA 	RESETA	
+		goto_xy	18,POSy
 		jmp		LER_SETA
+
+INC_POSX:
+		INC POSX
+
+;RESETA:
+;		goto_xy	18,5
+
+APAGA_CAR:
+		CMP POSX, 18
+		JNG	LER_SETA
+		;ADD POSX, -1	
+		goto_xy	POSx,POSy
+		MOV Car3, 32
+		mov		ah, 02h		; coloca o caracter lido no ecra
+		mov		dl, Car3
+		int		21H	
+		;DEC POSX 
+
 		
+;TECLADO:
+		;CALL LE_TECLADO_MENU
 ESTEND:	cmp 	al,48h
 		jne		BAIXO
 		dec		POSy		;cima
@@ -455,6 +539,40 @@ ASSINALA:
 		cmp POSy, 28
 		je		SAIR
 		jmp		CICLO
+
+POS_NOME1:
+mov ax, 0B800h ; mem.video
+     mov es, ax
+
+	 mov si, 516  ; origem (03,18)
+     ;mov di, 2000 ; destino (12,40)
+     mov cx, 13
+	 jmp LE_NOME1
+
+LE_NOME1:
+	 mov al, es:[si] ; ler letra
+     mov nomeJ1[si], al
+     mov ah, es:[si+1] ; atributo
+     ;mov es:[di], al ; escrever
+     mov byte ptr es:[di+1], 00000010b
+     add si, 2
+    ; add di, 2
+     loop LE_NOME1
+	 JMP POSE_NOME1
+
+POSE_NOME1:
+	 mov si, 516  ; origem (03,18)
+     mov di, 196 ; destino (01,60)
+     mov cx, 13
+	 ;jmp ESCREVE_NOME1
+
+;ESCREVE_NOME1:
+;	 mov al, nomeJ1[si]
+ ;    mov es:[di], al
+  ;   mov byte ptr es:[di+1], 00000010b
+   ;  add si, 2
+     ;add di, 2
+    ; loop ESCREVE_NOME1
 
 SAIR:
 		call 	apaga_ecran
@@ -535,6 +653,7 @@ fim:
 AVATAR		endp
 
 
+
 ;########################################################################
 Main  proc
 		mov			ax, dseg
@@ -556,6 +675,8 @@ Main  proc
 		call		IMP_FICH
 		call 		cor_o
 		call 		cor_x
+		call 		cor_nome_jogador
+		call 		cor_espetador
 		call 		AVATAR
 		goto_xy		0,22
 		
