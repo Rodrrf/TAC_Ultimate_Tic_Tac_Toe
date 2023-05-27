@@ -606,7 +606,7 @@ CICLO:
 			mov		dl, Car	
 			int		21H			
 	
-			goto_xy	POSx,POSy	; Vai para posição do cursor
+			goto_xy	15,7	; Vai para posição do cursor
 		
 LER_SETA:	call 	LE_TECLA
 			cmp		ah, 1
@@ -629,24 +629,107 @@ LER_SETA:	call 	LE_TECLA
 ESTEND:		cmp 	al,48h
 			jne		BAIXO
 			dec		POSy		;cima
-			jmp		CICLO
+			cmp 	POSy, 2
+			jbe		RETURNUP_l1
+			cmp 	POSy, 5
+			je		RETURNUP_l2
+			cmp 	POSy, 9
+			je		RETURNUP_l3
+			jmp 	CICLO
+
+RETURNUP_l1: 					;Não sai por cima do tabuleiro
+		mov POSy, 2
+		jmp CICLO
+
+RETURNUP_l2:			;passa do tabuleiro 2 para o tabuleiro 1
+		mov POSy, 4
+		jmp CICLO
+
+RETURNUP_l3:
+		mov POSy, 8
+		jmp CICLO
 
 BAIXO:		cmp		al,50h
 			jne		ESQUERDA	
 			inc 	POSy		;Baixo
+			cmp 	POSy, 5
+			je		RETURNDOWN_l1
+			cmp 	POSy, 9
+			je		RETURNDOWN_l2
+			cmp 	POSy, 12
+			jae		RETURNDOWN_l3
 			jmp		CICLO
+
+RETURNDOWN_l1:
+		mov POSy, 6
+		jmp CICLO
+
+RETURNDOWN_l2:
+		mov POSy, 10
+		jmp CICLO
+
+RETURNDOWN_l3:
+		mov POSy, 12
+		jmp CICLO
 
 ESQUERDA:
 			cmp		al,4Bh
 			jne		DIREITA
+			dec		POSx
 			dec		POSx		;Esquerda
+			cmp 	POSx, 4
+			jbe		RETURNESQ_c1
+			cmp 	POSx, 11
+			je		RETURNESQ_c2
+			cmp 	POSx, 20
+			je		RETURNESQ_c3
+			cmp 	POSx, 26
+			jae		RETURNESQ_c4
 			jmp		CICLO
+
+
+RETURNESQ_c1:
+		mov POSx, 4
+		jmp		CICLO
+
+RETURNESQ_c2:
+		mov POSx, 8
+		jmp		CICLO
+
+RETURNESQ_c3:
+		mov POSx, 17
+		jmp		CICLO
+
+RETURNESQ_c4:
+		mov POSx, 26
+		jmp		CICLO
+
 
 DIREITA:
 			cmp		al,4Dh
 			jne		LER_SETA 
-			inc		POSx		;Direita
+					;Direita
+			cmp 	POSx, 8
+			je		RETURNDIR_c1
+			cmp 	POSx, 17
+			je		RETURNDIR_c2
+			cmp 	POSx, 26
+			jae		RETURNDIR_c3
+			inc		POSx
+			inc		POSx
 			jmp		CICLO
+
+RETURNDIR_c1:
+		mov POSx, 13
+		jmp CICLO
+
+RETURNDIR_c2:
+		mov POSx, 22
+		jmp CICLO
+
+RETURNDIR_c3:
+		mov POSx, 26
+		jmp CICLO
 
 fim:				
 			RET
