@@ -593,6 +593,8 @@ assinala_Nomes	endp
 AVATAR	PROC
 			mov		ax,0B800h
 			mov		es,ax
+			mov 	POSy, 7
+			mov 	POSx, 15
 CICLO:			
 			goto_xy	POSx,POSy		; Vai para nova possição
 			mov 	ah, 08h
@@ -606,7 +608,7 @@ CICLO:
 			mov		dl, Car	
 			int		21H			
 	
-			goto_xy	15,7	; Vai para posição do cursor
+			goto_xy	POSx,POSy	; Vai para posição do cursor
 		
 LER_SETA:	call 	LE_TECLA
 			cmp		ah, 1
