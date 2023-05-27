@@ -42,6 +42,9 @@ dseg	segment para public 'data'
 		nomeJ1			db 		? ; Guarda o nome do jogador 1
 		nomeJ2			db		? ; Guarda o nome do jogador 2
 
+		nplayer 		db	2	; numero do jogador a jogar varia entre 1 e 2
+		n_tab			db  5   ; numero do tabuleiro a jogar varia entre 1 e 9
+
 dseg	ends
 
 cseg	segment para public 'code'
@@ -58,6 +61,64 @@ goto_xy	macro		POSx,POSy
 		int		10h
 endm
 
+
+jogador_jogar macro nplayer   ;coloca a cor do jogador e do espetador 
+		cmp nplayer, 1
+		je jx
+		cmp nplayer, 2
+		je	jy
+jx:
+	mov 	si, 240 	; origem(01,40)	
+	jmp ciclo1
+ciclo1:
+	mov al,es:[si] ; le caracter
+	cmp al, ' '
+	je jy_espetador
+	mov		byte ptr es:[si+1],7 
+	inc si
+	inc si
+	loop ciclo1
+
+jy_espetador:
+	mov 	si, 400 	; origem(02,40)
+	jmp ciclo2
+ciclo2:
+		mov al,es:[si] ; le caracter
+		cmp al, ' '
+		je fim
+		mov		byte ptr es:[si+1],8	 
+		inc si
+		inc si
+		loop ciclo2
+
+jy:
+	mov 	si, 400 	; origem(02,40)
+	jmp ciclo3
+ciclo3:
+		mov al,es:[si] ; le caracter
+		cmp al, ' '
+		je jx_espetador
+		mov		byte ptr es:[si+1],7	 
+		inc si
+		inc si
+		loop ciclo3
+
+jx_espetador:
+	mov 	si, 240 	; origem(01,40)	
+	jmp ciclo4
+ciclo4:
+	mov al,es:[si] ; le caracter
+	cmp al, ' '
+	je fim
+	mov		byte ptr es:[si+1],8
+	inc si
+	inc si
+	loop ciclo4
+
+
+fim:
+	int 10h
+endm
 
 ;ROTINA PARA APAGAR ECRAN
 
@@ -117,35 +178,6 @@ fim:
 		
 cor_o	endp
 
-cor_nome_jogador proc
-		 mov 	si, 240 	; origem(01,40)	
-
-ciclo:
-		mov al,es:[si] ; le caracter
-		cmp al, ' '
-		je fim
-		mov		byte ptr es:[si+1],7 
-		inc si
-		inc si
-		loop ciclo 
-fim: 
-	ret
-cor_nome_jogador endp
-
-cor_espetador proc
-mov 	si, 400 	; origem(02,40)	
-
-ciclo:
-		mov al,es:[si] ; le caracter
-		cmp al, ' '
-		je fim
-		mov		byte ptr es:[si+1],8	 
-		inc si
-		inc si
-		loop ciclo 
-fim: 
-	ret
-cor_espetador endp
 ;########################################################################
 
 ;########################################################################
@@ -610,84 +642,350 @@ CICLO:
 	
 			goto_xy	POSx,POSy	; Vai para posição do cursor
 		
-LER_SETA:	call 	LE_TECLA
+LER_SETA:	
+			jogador_jogar nplayer ; coloca sempre o nome dos jogadores com cor atualizada
+			call 	LE_TECLA
 			cmp		ah, 1
 			je		ESTEND
 			CMP 	AL, 27		; ESCAPE
-			JE		FIM
-			goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
-			mov		CL, Car
-			cmp		CL, 32		; Só escreve se for espaço em branco
-			JNE 	LER_SETA
-			mov		ah, 02h		; coloca o caracter lido no ecra
-			mov		dl, al
-			int		21H	
+			JE		fima
+			cmp 	al, 13      ; ENTER
+			je 		ASSINALA_JOGADA
+			;goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
+			;mov		CL, Car
+			;cmp		CL, 32		; Só escreve se for espaço em branco
+			;JNE 	LER_SETA
+			;mov		ah, 02h		; coloca o caracter lido no ecra
+			;mov		dl, al
+			;int		21H	
 			goto_xy	POSx,POSy
-			
 			
 			jmp		LER_SETA
 	
-		
+ASSINALA_JOGADA:
+		goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
+		mov		CL, Car
+		cmp		CL, 32		; Só escreve se for espaço em branco
+		JNE 	LER_SETA
+		cmp 	nplayer, 1
+		je		JOGA_X
+		cmp 	nplayer, 2
+		je		JOGA_O
+JOGA_X:
+	 	mov 	al, 'X'
+		mov 	ah, 02h
+		mov 	dl, al
+		int 	21h
+		call 	cor_x
+	 	mov 	nplayer, 2
+		cmp 	POSy, 2    ; verifica em que linha jogou para alterar o tabuleiro 
+		je		vePosx1
+		cmp 	POSy, 3
+		je		vePosx2
+		cmp 	POSy, 4
+		je		vePosx3
+		cmp 	POSy, 6	   
+		je		vePosx1
+		cmp 	POSy, 7
+		je		vePosx2
+		cmp 	POSy, 8
+		je		vePosx3
+		cmp 	POSy, 10  
+		je		vePosx1
+		cmp 	POSy, 11
+		je		vePosx2
+		cmp 	POSy, 12
+		je		vePosx3
+		jmp 	LER_SETA
+
+JOGA_O:
+		mov 	al, 'O'
+		mov 	ah, 02h
+		mov 	dl, al
+		int 	21h
+		call 	cor_o
+		mov 	nplayer, 1
+		cmp 	POSy, 2    ; verifica em que linha jogou para alterar o tabuleiro 
+		je		vePosx1
+		cmp 	POSy, 3
+		je		vePosx2
+		cmp 	POSy, 4
+		je		vePosx3
+		cmp 	POSy, 6	   
+		je		vePosx1
+		cmp 	POSy, 7
+		je		vePosx2
+		cmp 	POSy, 8
+		je		vePosx3
+		cmp 	POSy, 10  
+		je		vePosx1
+		cmp 	POSy, 11
+		je		vePosx2
+		cmp 	POSy, 12
+		je		vePosx3
+		jmp 	LER_SETA
+
+vePosx1:
+		cmp posx, 4
+		je	mudaTab1
+		cmp posx, 6
+		je  mudaTab2
+		cmp posx, 8
+		je  mudaTab3
+		cmp	posx, 13
+		je	mudaTab1
+		cmp posx, 15
+		je  mudaTab2
+		cmp posx, 17
+		je  mudaTab3
+		cmp	posx, 22
+		je	mudaTab1
+		cmp posx, 24
+		je  mudaTab2
+		cmp posx, 26
+		je  mudaTab3
+		jmp LER_SETA
+
+vePosx2:	
+		cmp posx, 4
+		je	mudaTab4
+		cmp posx, 6
+		je  mudaTab5
+		cmp posx, 8
+		je  mudaTab6
+		cmp	posx, 13
+		je	mudaTab4
+		cmp posx, 15
+		je  mudaTab5
+		cmp posx, 17
+		je  mudaTab6
+		cmp	posx, 22
+		je	mudaTab4
+		cmp posx, 24
+		je  mudaTab5
+		cmp posx, 26
+		je  mudaTab6
+		jmp LER_SETA
+
+vePosx3:	
+		cmp posx, 4
+		je	mudaTab7
+		cmp posx, 6
+		je  mudaTab8
+		cmp posx, 8
+		je  mudaTab9
+		cmp	posx, 13
+		je	mudaTab7
+		cmp posx, 15
+		je  mudaTab8
+		cmp posx, 17
+		je  mudaTab9
+		cmp	posx, 22
+		je	mudaTab7
+		cmp posx, 24
+		je  mudaTab8
+		cmp posx, 26
+		je  mudaTab9
+		jmp LER_SETA
+
+mudaTab1:
+		mov n_tab, 1
+		mov posX, 4
+		mov posy, 2
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab2:
+		mov n_tab, 2
+		mov posX, 13
+		mov posy, 2
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab3:
+		mov n_tab, 3
+		mov posX, 22
+		mov posy, 2
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab4:
+		mov n_tab, 4
+		mov posX, 4
+		mov posy, 6
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab5:
+		mov n_tab, 5
+		mov posX, 13
+		mov posy, 6
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab6:
+		mov n_tab, 6
+		mov posX, 22
+		mov posy, 6
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab7:
+		mov n_tab, 7
+		mov posX, 4
+		mov posy, 10
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab8:
+		mov n_tab, 8
+		mov posX, 13
+		mov posy, 10
+		goto_xy posX, posy
+		jmp LER_SETA
+
+mudaTab9:
+		mov n_tab, 9
+		mov posX, 22
+		mov posy, 10
+		goto_xy posX, posy
+		jmp LER_SETA
+
 ESTEND:		cmp 	al,48h
 			jne		BAIXO
 			dec		POSy		;cima
-			cmp 	POSy, 2
-			jbe		RETURNUP_l1
-			cmp 	POSy, 5
-			je		RETURNUP_l2
-			cmp 	POSy, 9
-			je		RETURNUP_l3
+			cmp 	n_tab, 1
+			je		configCima_tl1
+			cmp 	n_tab, 2
+			je		configCima_tl1
+			cmp 	n_tab, 3
+			je		configCima_tl1
+			cmp 	n_tab, 4
+			je		configCima_tl2
+			cmp 	n_tab, 5
+			je		configCima_tl2
+			cmp 	n_tab, 6
+			je		configCima_tl2
+			cmp 	n_tab, 7
+			je		configCima_tl3
+			cmp 	n_tab, 8
+			je		configCima_tl3
+			cmp 	n_tab, 9
+			je		configCima_tl3
 			jmp 	CICLO
 
-RETURNUP_l1: 					;Não sai por cima do tabuleiro
+configCima_tl1:			;Não sai por cima do tabuleiro 
+		cmp POSy, 2
+		jnbe CICLO
 		mov POSy, 2
 		jmp CICLO
 
-RETURNUP_l2:			;passa do tabuleiro 2 para o tabuleiro 1
-		mov POSy, 4
-		jmp CICLO
+configCima_tl2:			;Não sai por cima do tabuleiro
+		cmp POSy, 6
+		jnbe CICLO 
+		mov POSy, 6
+		jmp CICLO		
 
-RETURNUP_l3:
-		mov POSy, 8
-		jmp CICLO
+configCima_tl3:			;Não sai por cima do tabuleiro 
+		cmp POSy, 10
+		jnbe CICLO
+		mov POSy, 10
+		jmp CICLO				
 
 BAIXO:		cmp		al,50h
 			jne		ESQUERDA	
 			inc 	POSy		;Baixo
-			cmp 	POSy, 5
-			je		RETURNDOWN_l1
-			cmp 	POSy, 9
-			je		RETURNDOWN_l2
-			cmp 	POSy, 12
-			jae		RETURNDOWN_l3
+			cmp 	n_tab, 1
+			je		configBaixo_tl1
+			cmp 	n_tab, 2
+			je		configBaixo_tl1
+			cmp 	n_tab, 3
+			je		configBaixo_tl1
+			cmp 	n_tab, 4
+			je		configBaixo_tl2
+			cmp 	n_tab, 5
+			je		configBaixo_tl2
+			cmp 	n_tab, 6
+			je		configBaixo_tl2
+			cmp 	n_tab, 7
+			je		configBaixo_tl3
+			cmp 	n_tab, 8
+			je		configBaixo_tl3
+			cmp 	n_tab, 9
+			je		configBaixo_tl3
 			jmp		CICLO
 
-RETURNDOWN_l1:
-		mov POSy, 6
+
+configBaixo_tl1:			;Não sai por baixo do tabuleiro 
+		cmp Posy, 4
+		jnae CICLO
+		mov POSy, 4
 		jmp CICLO
 
-RETURNDOWN_l2:
-		mov POSy, 10
+configBaixo_tl2:			;Não sai por baixo do tabuleiro 
+		cmp Posy, 8
+		jnae CICLO
+		mov POSy, 8		
 		jmp CICLO
 
-RETURNDOWN_l3:
+configBaixo_tl3:			;Não sai por baixo do tabuleiro 
+		cmp Posy, 12
+		jnae CICLO
 		mov POSy, 12
 		jmp CICLO
+
 
 ESQUERDA:
 			cmp		al,4Bh
 			jne		DIREITA
 			dec		POSx
 			dec		POSx		;Esquerda
-			cmp 	POSx, 4
-			jbe		RETURNESQ_c1
-			cmp 	POSx, 11
-			je		RETURNESQ_c2
-			cmp 	POSx, 20
-			je		RETURNESQ_c3
-			cmp 	POSx, 26
-			jae		RETURNESQ_c4
-			jmp		CICLO
+			cmp 	n_tab, 1
+			je		configEsq_tc1
+			cmp 	n_tab, 2
+			je		configEsq_tc2
+			cmp 	n_tab, 3
+			je		configEsq_tc3
+			cmp 	n_tab, 4
+			je		configEsq_tc1
+			cmp 	n_tab, 5
+			je		configEsq_tc2
+			cmp 	n_tab, 6
+			je		configEsq_tc3
+			cmp 	n_tab, 7
+			je		configEsq_tc1
+			cmp 	n_tab, 8
+			je		configEsq_tc2
+			cmp 	n_tab, 9
+			je		configEsq_tc3						
+			;cmp 	POSx, 4			;NAO DEIXA PASSAR AS MARGENS DO TABULEIRO GRANDE
+			;jbe		RETURNESQ_c1
+			;cmp 	POSx, 11
+			;je		RETURNESQ_c2
+			;cmp 	POSx, 20
+			;je		RETURNESQ_c3
+			;cmp 	POSx, 26
+			;jae		RETURNESQ_c4
+			;jmp		CICLO
+
+
+configEsq_tc1:					;Não sai pela esquerda do tabuleiro 
+		cmp Posx, 4
+		jnbe CICLO
+		mov POSx, 4
+		jmp CICLO
+
+configEsq_tc2:			;Não sai por esquerda do tabuleiro 
+		cmp POSx, 13
+		jnbe CICLO
+		mov POSx, 13		
+		jmp CICLO
+
+configEsq_tc3:			;Não sai por esquerda do tabuleiro 
+		cmp POSx, 22
+		jnbe CICLO
+		mov POSx, 22
+		jmp CICLO
 
 
 RETURNESQ_c1:
@@ -709,31 +1007,49 @@ RETURNESQ_c4:
 
 DIREITA:
 			cmp		al,4Dh
-			jne		LER_SETA 
-					;Direita
-			cmp 	POSx, 8
-			je		RETURNDIR_c1
-			cmp 	POSx, 17
-			je		RETURNDIR_c2
-			cmp 	POSx, 26
-			jae		RETURNDIR_c3
+			jne		LER_SETA 			
+			inc		POSx		;Direita
 			inc		POSx
-			inc		POSx
+			cmp 	n_tab, 1
+			je		configDir_tc1
+			cmp 	n_tab, 2
+			je		configDir_tc2
+			cmp 	n_tab, 3
+			je		configDir_tc3
+			cmp 	n_tab, 4
+			je		configDir_tc1
+			cmp 	n_tab, 5
+			je		configDir_tc2
+			cmp 	n_tab, 6
+			je		configDir_tc3
+			cmp 	n_tab, 7
+			je		configDir_tc1
+			cmp 	n_tab, 8
+			je		configDir_tc2
+			cmp 	n_tab, 9
+			je		configDir_tc3	
 			jmp		CICLO
 
-RETURNDIR_c1:
-		mov POSx, 13
+
+configDir_tc1:					;Não sai pela esquerda do tabuleiro 
+		cmp Posx, 8
+		jnae CICLO
+		mov POSx, 8
 		jmp CICLO
 
-RETURNDIR_c2:
-		mov POSx, 22
+configDir_tc2:			;Não sai por esquerda do tabuleiro 
+		cmp POSx, 17
+		jnae CICLO
+		mov POSx, 17		
 		jmp CICLO
 
-RETURNDIR_c3:
+configDir_tc3:			;Não sai por esquerda do tabuleiro 
+		cmp POSx, 26
+		jnae CICLO
 		mov POSx, 26
 		jmp CICLO
 
-fim:				
+fima:				
 			RET
 AVATAR		endp
 
@@ -760,8 +1076,7 @@ Main  proc
 		call		IMP_FICH
 		call 		cor_o
 		call 		cor_x
-		call 		cor_nome_jogador
-		call 		cor_espetador
+		jogador_jogar nplayer
 		call 		AVATAR
 		goto_xy		0,22
 		
