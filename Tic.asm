@@ -44,6 +44,26 @@ dseg	segment para public 'data'
 
 		nplayer 		db	2	; numero do jogador a jogar varia entre 1 e 2
 		n_tab			db  5   ; numero do tabuleiro a jogar varia entre 1 e 9
+		
+		win1			db  1, 1, 1, ?, ?, ?, ?, ?, ? ; arrays com todas as possibilidades de ganhar
+		win2			db  ?, ?, ?, 1, 1, 1, ?, ?, ?
+		win3			db  ?, ?, ?, ?, ?, ?, 1, 1, 1
+		win4			db  ?, ?, 1, ?, 1, ?, 1, ?, ?
+		win5			db  1, ?, ?, ?, 1, ?, ?, ?, 1
+		win6			db  1, ?, ?, 1, ?, ?, 1, ?, ?
+		win7			db  ?, 1, ?, ?, 1, ?, ?, 1, ?
+		win8			db  ?, ?, 1, ?, ?, 1, ?, ?, 1
+
+
+		jtab1			db 9 dup(?)		;guarda as jogadas efetuadas em cada tabuleiro
+		jtab2			db 9 dup(?)
+		jtab3			db 9 dup(?)
+		jtab4			db 9 dup(?)
+		jtab5			db 9 dup(?)
+		jtab6			db 9 dup(?)
+		jtab7			db 9 dup(?)
+		jtab8			db 9 dup(?)
+		jtab9			db 9 dup(?)
 
 dseg	ends
 
@@ -496,115 +516,158 @@ CICLO:
 		
 LER_SETA:	
 		call 	LE_TECLA_MENU
-		cmp		ah, 1
-		je		ESTEND
-		
-		
-		CMP		AL, 13  ; ENTER
+		;cmp		ah, 1 	
+		;je		ESTEND
+		cmp		AL, 13  	; ENTER
 		je		ASSINALA
-		goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
-		mov		CL, Car3
-		;cmp		CL, 32		; Só escreve se for espaço em branco
-		;JNE 	LER_SETA
+		goto_xy	POSx,POSy
+		cmp		POSy, 7
+		je 		NO_TECLA
+		cmp 	al, 30h
+		je		APAGA_CAR 	
 		mov		ah, 02h		; coloca o caracter lido no ecra
 		mov		dl, al
 		int		21H	
-		CMP 	al, 8h		; CARACTER DE APAGAR
-		JE		APAGA_CAR
-		CMP 	POSX, 45
-		JNGE	INC_POSX
-		;CMP 	POSY, 3
-		;JNA 	RESETA	
-		goto_xy	18,POSy
+		inc 	POSx
+		cmp 	POSx, 45
+		jae 	MANTER
+		goto_xy	POSx,POSy 	; coloca cursor na posicao seguinte
 		jmp		LER_SETA
 
-INC_POSX:
-		INC POSX
+NO_TECLA:					; garante que apenas aceita o enter no botao começar
+		cmp		al, 13
+		jne		LER_SETA
+		je 		fim
 
-;RESETA:
-;		goto_xy	18,5
+MANTER:
+		mov POSx, 45
+		goto_xy POSx, POSy
+		jmp LER_SETA
 
 APAGA_CAR:
-		CMP POSX, 18
-		JNG	LER_SETA
-		;ADD POSX, -1	
-		goto_xy	POSx,POSy
-		MOV Car3, 32
+		cmp 	POSX, 18
+		jnae	LER_SETA	
+		goto_xy	POSx,POSy	
+		mov 	al, 32
 		mov		ah, 02h		; coloca o caracter lido no ecra
-		mov		dl, Car3
+		mov		dl, al
 		int		21H	
-		;DEC POSX 
+		dec 	POSX
+		cmp 	POSX, 17
+		je		clear_c
+		goto_xy	POSx,POSy  	; coloca cursor na nova posicao apos apagar caracter
+		jmp 	LER_SETA
 
-		
-;TECLADO:
-		;CALL LE_TECLADO_MENU
-ESTEND:	cmp 	al,48h
-		jne		BAIXO
-		dec		POSy		;cima
-		dec		POSy
-		cmp 	POSy, 7
-		jbe		RETURNUP
-		jmp		CICLO
-
-RETURNUP: 						;Não sai por cima do tabuleiro
-		mov POSy, 3
+clear_c:					; faz com que o caracter apaga nao vá para alem da posicao 18
 		mov POSx, 18
-		jmp CICLO
-
-BAIXO:	cmp		al,50h
-		jne		LER_SETA 		;É só para andar para cima e para baixo
-		inc 	POSy		;Baixo
-		inc 	POSy
-		cmp 	POSy, 7
-		jae		RETURNDOWN
-		jmp		CICLO
-
-RETURNDOWN: 						;Não sai por cima do tabuleiro
-		mov POSy, 7
-		mov POSx, 28
-		jmp CICLO
-
+		goto_xy	POSx,POSy
+		jmp 	LER_SETA
 
 ASSINALA:
-		cmp POSy, 7
+		cmp 	POSy, 3
+		je  	NAME2
+		cmp 	POSy, 5
+		je		START
+		cmp 	POSy, 7
 		je 		fim
-		cmp POSy, 28
-		je		SAIR
 		jmp		CICLO
 
+NAME2:
+		mov 	POSy, 5
+		mov 	POSx, 18
+		goto_xy	POSx, POSy
+		jmp 	POS_NOME1
+		jmp 	LER_SETA
+
+START:
+		mov 	POSy, 7
+		mov 	POSx, 28
+		goto_xy	POSx, POSy
+		jmp 	POS_NOME2
+		jmp 	LER_SETA
+
 POS_NOME1:
-mov ax, 0B800h ; mem.video
+
+	 mov ax, 0B800h ; mem.video
      mov es, ax
 
 	 mov si, 516  ; origem (03,18)
-     ;mov di, 2000 ; destino (12,40)
-     mov cx, 13
-	 jmp LE_NOME1
+     mov di, 0 ; destino (12,40)
+     ;mov cx, 13
+	 jmp BUSCA_NOME1
 
-LE_NOME1:
+BUSCA_NOME1:
 	 mov al, es:[si] ; ler letra
-     mov nomeJ1[si], al
-     mov ah, es:[si+1] ; atributo
+	 cmp al, 32
+	 jne GUARDA1
+	 mov nomeJ1[di+1], '$'
+     jmp LER_SETA
+     
+GUARDA1:
+	mov nomeJ1[di], al
+     ;mov ah, es:[si+1] ; atributo
      ;mov es:[di], al ; escrever
-     mov byte ptr es:[di+1], 00000010b
-     add si, 2
-    ; add di, 2
-     loop LE_NOME1
-	 JMP POSE_NOME1
-
-POSE_NOME1:
-	 mov si, 516  ; origem (03,18)
-     mov di, 196 ; destino (01,60)
-     mov cx, 13
-	 ;jmp ESCREVE_NOME1
+     ;mov byte ptr es:[si+1], 00000010b
+    add si, 2
+    add di, 1
+	loop BUSCA_NOME1
+;POSE_NOME1:
+;	 mov di, 0  ; origem (03,18)
+ ;    mov si, 1494 ; destino (09,27)
+	 ;mov cx, 13
+;	 jmp ESCREVE_NOME1
 
 ;ESCREVE_NOME1:
-;	 mov al, nomeJ1[si]
- ;    mov es:[di], al
-  ;   mov byte ptr es:[di+1], 00000010b
+;	 mov al, nomeJ1[di]
+;	 cmp al, '$'
+;	 je LER_SETA
+ ;    mov es:[si], al
+  ;   mov byte ptr es:[si+1], 00000010b
    ;  add si, 2
-     ;add di, 2
-    ; loop ESCREVE_NOME1
+    ; add di, 1
+     ;loop ESCREVE_NOME1
+
+
+POS_NOME2:
+
+	 mov ax, 0B800h ; mem.video
+     mov es, ax
+
+	 mov si, 836  ; origem (03,18)
+     mov di, 0 ; destino (12,40)
+     ;mov cx, 13
+	 jmp BUSCA_NOME2
+
+BUSCA_NOME2:
+	 mov al, es:[si] ; ler letra
+	 cmp al, 32
+	 jne GUARDA2
+	 mov nomeJ2[di+1], '$'
+     jmp LER_SETA
+     
+GUARDA2:
+	mov nomeJ2[di], al
+     ;mov ah, es:[si+1] ; atributo
+     ;mov es:[di], al ; escrever
+     ;mov byte ptr es:[si+1], 00000010b
+    add si, 2
+    add di, 1
+	loop BUSCA_NOME2
+;POSE_NOME2:
+;	 mov di, 0  ; origem (03,18)
+ ;    mov si, 1654 ; destino (09,27)
+	 ;mov cx, 13
+;	 jmp ESCREVE_NOME2
+
+;ESCREVE_NOME2:
+;	 mov al, nomeJ2[di]
+;	 cmp al, '$'
+;	 je LER_SETA
+ ;    mov es:[si], al
+  ;   mov byte ptr es:[si+1], 00000010b
+   ;  add si, 2
+    ; add di, 1
+     ;loop ESCREVE_NOME2
 
 SAIR:
 		call 	apaga_ecran
@@ -641,6 +704,41 @@ CICLO:
 			int		21H			
 	
 			goto_xy	POSx,POSy	; Vai para posição do cursor
+
+			
+			jmp POSE_NOME1
+
+POSE_NOME1:
+	 mov di, 0  ; contador
+	 mov si, 240 ; destino (01,40)
+	 ;mov cx, 13
+	 jmp ESCREVE_NOME1
+
+ESCREVE_NOME1:
+	 mov al, nomeJ1[di]
+	 cmp al, '$'
+	 je POSE_NOME2
+     mov es:[si], al
+    ; mov byte ptr es:[si+1], 00000010b
+     add si, 2
+     add di, 1
+     loop ESCREVE_NOME1
+
+POSE_NOME2:
+	 mov di, 0  ; contador
+	 mov si, 400 ; destino (02,40)
+	 ;mov cx, 13
+	 jmp ESCREVE_NOME2
+
+ESCREVE_NOME2:
+	 mov al, nomeJ2[di]
+	 cmp al, '$'
+	 je LER_SETA
+     mov es:[si], al
+     mov byte ptr es:[si+1], 00000010b
+     add si, 2
+     add di, 1
+     loop ESCREVE_NOME2
 		
 LER_SETA:	
 			jogador_jogar nplayer ; coloca sempre o nome dos jogadores com cor atualizada
