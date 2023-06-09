@@ -42,28 +42,10 @@ dseg	segment para public 'data'
 		nomeJ1			db 		? ; Guarda o nome do jogador 1
 		nomeJ2			db		? ; Guarda o nome do jogador 2
 
+		writeNome		db	0	; Varia entre 0 e 1, 1 se já escreveu o nome dos jogadores
+
 		nplayer 		db	2	; numero do jogador a jogar varia entre 1 e 2
 		n_tab			db  5   ; numero do tabuleiro a jogar varia entre 1 e 9
-		
-		win1			db  1, 1, 1, ?, ?, ?, ?, ?, ? ; arrays com todas as possibilidades de ganhar
-		win2			db  ?, ?, ?, 1, 1, 1, ?, ?, ?
-		win3			db  ?, ?, ?, ?, ?, ?, 1, 1, 1
-		win4			db  ?, ?, 1, ?, 1, ?, 1, ?, ?
-		win5			db  1, ?, ?, ?, 1, ?, ?, ?, 1
-		win6			db  1, ?, ?, 1, ?, ?, 1, ?, ?
-		win7			db  ?, 1, ?, ?, 1, ?, ?, 1, ?
-		win8			db  ?, ?, 1, ?, ?, 1, ?, ?, 1
-
-
-		jtab1			db 9 dup(?)		;guarda as jogadas efetuadas em cada tabuleiro
-		jtab2			db 9 dup(?)
-		jtab3			db 9 dup(?)
-		jtab4			db 9 dup(?)
-		jtab5			db 9 dup(?)
-		jtab6			db 9 dup(?)
-		jtab7			db 9 dup(?)
-		jtab8			db 9 dup(?)
-		jtab9			db 9 dup(?)
 
 dseg	ends
 
@@ -198,7 +180,6 @@ fim:
 		
 cor_o	endp
 
-;########################################################################
 
 ;########################################################################
 ; IMP_NOMES
@@ -705,10 +686,13 @@ CICLO:
 	
 			goto_xy	POSx,POSy	; Vai para posição do cursor
 
-			
-			jmp POSE_NOME1
-
+			cmp writeNome, 1
+			jne POSE_NOME1
+			cmp writeNome, 0
+			jne LER_SETA
 POSE_NOME1:
+	 mov writeNome, 1
+	 xor si, si
 	 mov di, 0  ; contador
 	 mov si, 240 ; destino (01,40)
 	 ;mov cx, 13
@@ -725,6 +709,7 @@ ESCREVE_NOME1:
      loop ESCREVE_NOME1
 
 POSE_NOME2:
+	 xor si, si
 	 mov di, 0  ; contador
 	 mov si, 400 ; destino (02,40)
 	 ;mov cx, 13
@@ -775,6 +760,7 @@ JOGA_X:
 		mov 	dl, al
 		int 	21h
 		call 	cor_x
+		;chamar procedimento para verificar se ganhou
 	 	mov 	nplayer, 2
 		cmp 	POSy, 2    ; verifica em que linha jogou para alterar o tabuleiro 
 		je		vePosx1
