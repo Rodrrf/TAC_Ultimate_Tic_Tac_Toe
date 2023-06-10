@@ -39,6 +39,10 @@ dseg	segment para public 'data'
 		POSy			db	1	; a linha pode ir de [1 .. 25]
 		POSx			db	2	; POSx pode ir [1..80]	
 
+		pos_ecra 		word	0 	;indice de mem. video 
+		lin				db 		?	;linha monitor
+		col 			db 		?	;coluna monitor
+
 		nomeJ1			db 		? ; Guarda o nome do jogador 1
 		nomeJ2			db		? ; Guarda o nome do jogador 2
 
@@ -47,6 +51,7 @@ dseg	segment para public 'data'
 		nplayer 		db	2	; numero do jogador a jogar varia entre 1 e 2
 		n_tab			db  5   ; numero do tabuleiro a jogar varia entre 1 e 9
 
+		bt1 			db	0	; 0 se tabuleiro 1 nao estiver bloqueado 1 se estiver bloqueado
 dseg	ends
 
 cseg	segment para public 'code'
@@ -64,13 +69,700 @@ goto_xy	macro		POSx,POSy
 endm
 
 
+;########################################################################
+posicao_ecra proc
+
+     pushf
+     push ax
+     push dx
+     push si 
+
+     mov al, lin
+     mov dl, 160
+     mul dl         ;AX  = al * (dl)   8bits
+     mov si, ax
+     mov al, col
+     mov dl, 2
+     mul dl
+     add si, ax
+	 mov pos_ecra, si
+
+     pop si
+     pop dx 
+     pop ax 
+     popf
+
+     ret
+posicao_ecra endp
+
+;########################################################################
+mudaCorTab1 proc ; muda a cor de fundo do tabuleiro 1 
+	
+	pushf     ;guarda
+    push ax
+    push dx
+    push si 
+
+	cmp nplayer, 1
+	je corV
+	cmp nplayer, 2
+	je corA 
+corV:
+	 mov lin, 2
+     mov col, 3
+     call posicao_ecra
+     mov si, pos_ecra
+	 mov di, pos_ecra
+     mov cx, 3
+	 jmp ciclo_ext
+ciclo_ext:
+        push cx ;guarda
+        push si 
+        push di 
+        mov cx, 7
+ciclod:
+        mov al, es:[si]
+        mov es:[di], al
+        mov byte ptr es:[di+1], 01001111b
+        add si, 2
+        add di, 2
+        loop ciclod
+
+        pop di  ;recupera
+        pop si 
+        pop cx 
+
+        add si, 160 ; mudar de linha
+        add di, 160
+        loop ciclo_ext 
+	jmp fim_muda
+
+corA:
+	jmp fim_muda
+
+
+fim_muda:
+	pop si 	;recupera
+    pop dx 
+    pop ax 
+    popf
+
+    ret
+mudaCorTab1 endp
+;########################################################################
+
+preencheTabUltimate proc 
+
+	push cx ;guarda
+    push si 
+    push di 
+
+	cmp bt1, 1
+	je preencheP1
+
+preencheP1:
+	mov al, 0
+	mov al, 6
+	mov lin, al 
+	mov al, 0
+	mov al, 43
+	mov col, al 
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, 0
+	mov al, 'X' 	;escreve caracter X no tabuleiro ultimate
+    mov es:[si], al
+    mov byte ptr es:[si+1], 4
+	jmp fimPreenche
+	
+fimPreenche:
+	pop di  ;recupera
+    pop si 
+    pop cx 
+	
+	ret
+preencheTabUltimate endp
+
+;########################################################################
+
+verTab1_X proc   ;verifica vencedor no tabuleiro 1 car X
+	pushf     ;guarda
+    push ax
+    push dx
+    push si 
+
+	cmp POSy, 2
+	je y2_vPx 	;verifica a coluna
+	cmp POSy, 3
+	je y3_vPx 
+	cmp POSy, 4
+	je y4_vPx
+
+y2_vPx:
+	cmp POSx, 4
+	je	t1p1   ; tabuleiro 1 posicao 1
+	cmp POSx, 6
+	je 	t1p2
+	cmp POSx, 8
+	je 	t1p3
+y3_vPx:
+	cmp POSx, 4
+	je	t1p4    ; tabuleiro 1 posicao 4
+	cmp POSx, 6
+	je 	t1p5
+	cmp POSx, 8
+	je 	t1p6
+y4_vPx:
+	cmp POSx, 4
+	je	t1p7	; tabuleiro 1 posicao 7
+	cmp POSx, 6
+	je 	t1p8
+	cmp POSx, 8
+	je 	t1p9
+
+t1p1:
+	 mov al,0 
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao abaixo possui o mesmo char
+	 add lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxLin1
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à direita possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxCol1
+	 
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao da diagonal possui o mesmo char
+	 add lin, 1
+	 mov al,0 
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxDiag1
+
+     
+t1p2:
+	 mov al, 0 
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao abaixo possui o mesmo char
+	 add lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxLin1
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à direita possui o mesmo char
+	 mov al, 0 
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntCol1
+
+
+t1p3:
+	 mov al, 0 
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao abaixo possui o mesmo char
+	 add lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxLin1
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à esquerda possui o mesmo char
+	 mov al, 0 
+	 mov al, POSx
+	 mov col, al 
+	 sub col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntCol2
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao da diagonal possui o mesmo char
+	 add lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 sub col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntDiag1
+t1p4:
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao abaixo possui o mesmo char
+	 add lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntLin1
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à direita possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxCol1
+t1p5:
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao abaixo possui o mesmo char
+	 add lin, 1
+	 mov al, 0 
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntLin1
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à direita possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntCol1
+t1p6:
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao abaixo possui o mesmo char
+	 add lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntLin1
+	
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à esquerda possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 sub col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntCol2
+t1p7:
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na acima abaixo possui o mesmo char
+	 sub lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntLin2
+	 
+	 mov al, 0 
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à direita possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verProxCol1
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao da diagonal possui o mesmo char
+	 sub lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntDiag2
+t1p8:
+	 mov al, 0 
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao acima possui o mesmo char
+	 sub lin, 1
+	 mov al, 0 
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntLin2
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à direita possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 add col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntCol1
+t1p9:
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na linha acima possui o mesmo char
+	 sub lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntLin2
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao à esquerda possui o mesmo char
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 sub col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntCol2
+	 
+	 mov al, 0
+	 mov al, POSy
+	 mov lin, al	;verifica se na posicao da diagonal possui o mesmo char
+	 sub lin, 1
+	 mov al, 0
+	 mov al, POSx
+	 mov col, al 
+	 sub col, 2
+	 call posicao_ecra
+	 mov si, pos_ecra
+	 mov al, es:[si] ; ler letra ecra
+     cmp al, 'X'
+     je  verAntDiag3
+
+verProxLin1:
+	add lin, 1
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verProxCol1:
+	add col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verProxDiag1:
+	add lin, 1
+	add col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntLin1:
+	mov al, 0
+	mov al, POSy
+	mov lin, al
+	sub lin, 1
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntLin2:
+	sub lin, 1
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntCol1:
+	mov al, 0
+	mov al, POSx
+	mov col, al
+	sub col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntCol2:
+	sub  col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntDiag1:
+	add lin, 1
+	sub col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntDiag2:
+	sub lin, 1
+	add col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+verAntDiag3:
+	sub lin, 1
+	sub col, 2
+	call posicao_ecra
+	mov si, pos_ecra
+	mov al, es:[si] ; ler letra ecra
+    cmp al, 'X'
+	jne fim_verT1
+	mov bt1, 1
+	jmp fim_verT1
+
+
+fim_verT1:
+    pop si 	;recupera
+    pop dx 
+    pop ax 
+    popf
+
+	ret
+
+verTab1_X endp
+;########################################################################
+ver_venc_minTab proc; verifica se há vencedor no mini tabuleiro
+
+	pushf     ;guarda
+    push ax
+    push dx
+    push si 
+
+	cmp n_tab, 1
+	je  t1
+	cmp n_tab, 2
+	je	 t2
+	cmp n_tab, 3
+	je	 t3
+	cmp n_tab, 4
+	je	 t4
+	cmp n_tab, 5
+	je	 t5
+	cmp n_tab, 6
+	je	 t6
+	cmp n_tab, 7
+	je	 t7
+	cmp n_tab, 8
+	je	 t8
+	cmp n_tab, 9
+	je	 t9
+
+t1:
+ 	cmp nplayer, 1
+	je px1
+	cmp nplayer, 2
+	je py1
+t2:
+	cmp nplayer, 1
+	je px2
+	cmp nplayer, 2
+	je py2
+t3:
+	cmp nplayer, 1
+	je px3
+	cmp nplayer, 2
+	je py3
+t4:
+	cmp nplayer, 1
+	je px4
+	cmp nplayer, 2
+	je py4
+t5:
+	cmp nplayer, 1
+	je px5
+	cmp nplayer, 2
+	je py5
+t6:
+	cmp nplayer, 1
+	je px6
+	cmp nplayer, 2
+	je py6
+t7:
+	cmp nplayer, 1
+	je px7
+	cmp nplayer, 2
+	je py7
+t8:
+	cmp nplayer, 1
+	je px8
+	cmp nplayer, 2
+	je py8
+t9:
+	cmp nplayer, 1
+	je px9
+	cmp nplayer, 2
+	je py9
+
+px1:  		;jogou X no tabuleiro 1
+	call verTab1_X
+	cmp bt1, 1
+	jne fimVer_minTab
+	call mudaCorTab1
+	call preencheTabUltimate
+	jmp fimVer_minTab
+px2:		;jogou X no tabuleiro 2
+	jmp fimVer_minTab
+px3:
+	jmp fimVer_minTab
+px4:
+	jmp fimVer_minTab
+px5:
+	jmp fimVer_minTab
+px6:
+	jmp fimVer_minTab
+px7:
+	jmp fimVer_minTab
+px8:
+	jmp fimVer_minTab
+px9:
+	jmp fimVer_minTab
+
+
+py1: 		;player y tabuleiro 1
+	jmp fimVer_minTab
+py2:
+	jmp fimVer_minTab
+py3:
+	jmp fimVer_minTab
+py4:
+	jmp fimVer_minTab
+py5:
+	jmp fimVer_minTab
+py6:
+	jmp fimVer_minTab
+py7:
+	jmp fimVer_minTab
+py8:
+	jmp fimVer_minTab
+py9:
+	jmp fimVer_minTab
+
+
+fimVer_minTab: 
+	 pop si 	;recupera
+     pop dx 
+     pop ax 
+     popf
+
+     ret
+ver_venc_minTab endp
+;########################################################################
+
 jogador_jogar macro nplayer   ;coloca a cor do jogador e do espetador 
 		cmp nplayer, 1
 		je jx
 		cmp nplayer, 2
 		je	jy
 jx:
-	mov 	si, 240 	; origem(01,40)	
+	mov lin, 1
+	mov col, 40
+	call posicao_ecra
+	mov 	si, pos_ecra 	; origem(01,40)	
 	jmp ciclo1
 ciclo1:
 	mov al,es:[si] ; le caracter
@@ -82,7 +774,10 @@ ciclo1:
 	loop ciclo1
 
 jy_espetador:
-	mov 	si, 400 	; origem(02,40)
+	mov lin, 2
+	mov col, 40
+	call posicao_ecra
+	mov 	si, pos_ecra  	; origem(02,40)
 	jmp ciclo2
 ciclo2:
 		mov al,es:[si] ; le caracter
@@ -94,7 +789,10 @@ ciclo2:
 		loop ciclo2
 
 jy:
-	mov 	si, 400 	; origem(02,40)
+	mov lin, 2
+	mov col, 40
+	call posicao_ecra
+	mov 	si, pos_ecra  	; origem(02,40)
 	jmp ciclo3
 ciclo3:
 		mov al,es:[si] ; le caracter
@@ -106,7 +804,10 @@ ciclo3:
 		loop ciclo3
 
 jx_espetador:
-	mov 	si, 240 	; origem(01,40)	
+	mov lin, 1
+	mov col, 40
+	call posicao_ecra
+	mov 	si, pos_ecra  	; origem(01,40)	
 	jmp ciclo4
 ciclo4:
 	mov al,es:[si] ; le caracter
@@ -711,7 +1412,10 @@ ESCREVE_NOME1:
 POSE_NOME2:
 	 xor si, si
 	 mov di, 0  ; contador
-	 mov si, 400 ; destino (02,40)
+	 mov lin, 2
+	 mov col, 40
+	 call posicao_ecra
+	 mov si, pos_ecra ; destino (02,40)
 	 ;mov cx, 13
 	 jmp ESCREVE_NOME2
 
@@ -760,7 +1464,7 @@ JOGA_X:
 		mov 	dl, al
 		int 	21h
 		call 	cor_x
-		;chamar procedimento para verificar se ganhou
+		call 	ver_venc_minTab;chamar procedimento para verificar se ganhou
 	 	mov 	nplayer, 2
 		cmp 	POSy, 2    ; verifica em que linha jogou para alterar o tabuleiro 
 		je		vePosx1
