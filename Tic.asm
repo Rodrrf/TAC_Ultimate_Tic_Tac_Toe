@@ -72,8 +72,10 @@ dseg	segment para public 'data'
 		et7				db 0 	; contador de jogadas do tabuleiro 7 util para mais à frente verificar empates
 		et8				db 0 	; contador de jogadas do tabuleiro 8 util para mais à frente verificar empates
 		et9				db 0 	; contador de jogadas do tabuleiro 9 util para mais à frente verificar empates
-		etUlti				db 0 	; contador de jogadas do tabuleiro ultimate util para mais à frente verificar empates
+		etUlti			db 0 	; contador de jogadas do tabuleiro ultimate util para mais à frente verificar empates
 
+		tabVencidosX	db 0	; contabiliza quantos tabuleiros foram ganhos pelo jogador X
+		tabVencidosO	db 0	; contabiliza quantos tabuleiros foram ganhos pelo jogador O
 dseg	ends
 
 cseg	segment para public 'code'
@@ -142,10 +144,14 @@ mudaCorEmpate proc
 	je corEmp8
 	cmp et9, 9
 	je corEmp9
+	cmp etUlti, 9
+	je ultiEmpate
 	jmp fim_muda
 	
 
 corEmp:
+	    inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -179,6 +185,8 @@ ciclode:
 	jmp fim_muda
 
 corEmp2:
+	    inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -212,6 +220,8 @@ ciclode2:
 	jmp fim_muda
 
 corEmp3:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -245,6 +255,8 @@ ciclode3:
 	jmp fim_muda
 
 corEmp4:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -278,6 +290,8 @@ ciclode4:
 	jmp fim_muda
 
 corEmp5:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -311,6 +325,8 @@ ciclode5:
 	jmp fim_muda
 
 corEmp6:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -344,6 +360,8 @@ ciclode6:
 	jmp fim_muda
 
 corEmp7:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -377,6 +395,8 @@ ciclode7:
 	jmp fim_muda
 
 corEmp8:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -410,6 +430,8 @@ ciclode8:
 	jmp fim_muda
 
 corEmp9:
+		inc tabVencidosX
+		inc tabVencidosO
 		mov lin, 20
 		mov col, 0
 		call posicao_ecra
@@ -442,6 +464,75 @@ ciclode9:
         loop ciclo_exte9 
 	jmp fim_muda
 
+ultiEmpate:
+		mov al, tabVencidosO
+		mov bl, tabVencidosX
+		cmp al, bl 
+		ja winO
+		mov lin, 20
+		mov col, 0
+		call posicao_ecra
+		mov si, pos_ecra
+		mov lin, 6
+		mov col, 42
+		call posicao_ecra
+		mov di, pos_ecra
+		mov cx, 3
+		jmp ciclo_exteUx
+ciclo_exteUx:
+        push cx ;guarda
+        push si 
+        push di 
+        mov cx, 7
+ciclodeUx:
+        mov al, es:[si]
+        mov es:[di], al
+        mov byte ptr es:[di+1], 01001111b
+        add si, 2
+        add di, 2
+        loop ciclodeUx
+
+        pop di  ;recupera
+        pop si 
+        pop cx 
+
+        add si, 160 ; mudar de linha
+        add di, 160
+        loop ciclo_exteUx
+	jmp fim_muda
+
+winO:
+		mov lin, 20
+		mov col, 0
+		call posicao_ecra
+		mov si, pos_ecra
+		mov lin, 6
+		mov col, 42
+		call posicao_ecra
+		mov di, pos_ecra
+		mov cx, 3
+		jmp ciclo_exteUo
+ciclo_exteUo:
+        push cx ;guarda
+        push si 
+        push di 
+        mov cx, 7
+ciclodeUo:
+        mov al, es:[si]
+        mov es:[di], al
+        mov byte ptr es:[di+1], 00011111b
+        add si, 2
+        add di, 2
+        loop ciclodeUo
+
+        pop di  ;recupera
+        pop si 
+        pop cx 
+
+        add si, 160 ; mudar de linha
+        add di, 160
+        loop ciclo_exteUo
+	jmp fim_muda
 fim_muda:
 	pop si 	;recupera
     pop dx 
@@ -465,6 +556,7 @@ mudaCorTab1 proc ; muda a cor de fundo do tabuleiro 1
 	je corA 
 
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -498,6 +590,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -554,6 +647,7 @@ mudaCorTab2 proc ; muda a cor de fundo do tabuleiro 2
 	cmp nplayer, 2
 	je corA2 
 corV2:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -587,6 +681,7 @@ ciclod2:
 	jmp fim_muda2
 
 corA2:
+	 add tabVencidosO, 1 
 	mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -642,7 +737,7 @@ mudaCorTab3 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corAt3
 corVt3:
-	 
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -678,6 +773,7 @@ ciclodt3:
 	jmp fim_mudat3
 
 corAt3:
+	 add tabVencidosO, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -735,6 +831,7 @@ mudaCorTab4 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corA
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -770,6 +867,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -829,6 +927,7 @@ mudaCorTab5 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corA
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -863,6 +962,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -921,6 +1021,7 @@ mudaCorTab6 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corA
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -956,6 +1057,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	  mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1015,6 +1117,7 @@ mudaCorTab7 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corA
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1050,6 +1153,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1109,6 +1213,7 @@ mudaCorTab8 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corA
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1144,6 +1249,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1203,6 +1309,7 @@ mudaCorTab9 proc ; muda a cor de fundo do tabuleiro 3
 	cmp nplayer, 2
 	je corA
 corV:
+	 add tabVencidosX, 1 
 	 mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1238,6 +1345,7 @@ ciclod:
 	jmp fim_muda
 
 corA:
+	 add tabVencidosO, 1 
 	  mov lin, 20
      mov col, 0
      call posicao_ecra
@@ -1285,7 +1393,7 @@ mudaCorTab9 endp
 
 ;########################################################################
 
-mudaCorTabUlti proc ; muda a cor de fundo do tabuleiro 3 
+mudaCorTabUlti proc ; muda a cor de fundo do tabuleiro ULTIMATE 
 	
 	pushf     ;guarda
     push ax
@@ -1392,6 +1500,7 @@ preencheTabUltimate proc
 	cmp bt9, 1
 	je 	vJ9
 vJ1:
+	add etUlti, 1
 	mov bt1, 2
 	mov col, 0 
 	mov lin, 0
@@ -1434,6 +1543,7 @@ preencheP1A:
 	jmp fimPreenche
 
 vJ2:
+	add etUlti, 1
 	mov bt2, 2
 	mov col, 0 
 	mov lin, 0
@@ -1476,6 +1586,7 @@ preencheP2A:
 	jmp fimPreenche
 
 vJ3:
+	add etUlti, 1
 	mov bt3, 2
 	mov col, 0 
 	mov lin, 0
@@ -1518,6 +1629,7 @@ preencheP1At3:
 	jmp fimPreenche
 
 vJ4:
+	add etUlti, 1 
 	mov bt4, 2
 	mov col, 0 
 	mov lin, 0
@@ -1560,6 +1672,7 @@ preencheP4A:
 	jmp fimPreenche
 
 vJ5:
+	add etUlti, 1
 	mov bt5, 2
 	mov col, 0 
 	mov lin, 0
@@ -1602,6 +1715,7 @@ preencheP5A:
 	jmp fimPreenche
 
 vJ6:
+	add etUlti, 1
 	mov bt6, 2
 	mov col, 0 
 	mov lin, 0
@@ -1644,6 +1758,7 @@ preencheP6A:
 	jmp fimPreenche
 
 vJ7:
+	add etUlti, 1
 	mov bt7, 2
 	mov col, 0 
 	mov lin, 0
@@ -1686,6 +1801,7 @@ preencheP7A:
 	jmp fimPreenche
 
 vJ8:
+	add etUlti, 1
 	mov bt8, 2
 	mov col, 0 
 	mov lin, 0
@@ -1728,6 +1844,7 @@ preencheP8A:
 	jmp fimPreenche
 
 vJ9:
+	add etUlti, 1
 	mov bt9, 2
 	mov col, 0 
 	mov lin, 0
@@ -10912,7 +11029,7 @@ verTab9_O endp
 ;########################################################################
 ;########################################################################
 
-verTabUlti_X proc   ;verifica vencedor no tabuleiro 1 car X
+verTabUlti_X proc   ;verifica vencedor no tabuleiro ultimate car X
 	pushf     ;guarda
     push ax
     push dx
