@@ -44,8 +44,8 @@ dseg	segment para public 'data'
 		lin				db 		?	;linha monitor
 		col 			db 		?	;coluna monitor
 
-		nomeJ1			db 		? ; Guarda o nome do jogador 1
-		nomeJ2			db		? ; Guarda o nome do jogador 2
+		nomeJ1			db 		29 dup('$') ; Guarda o nome do jogador 1
+		nomeJ2			db		29 dup('$')	; Guarda o nome do jogador 2
 
 		writeNome		db	0	; Varia entre 0 e 1, 1 se já escreveu o nome dos jogadores
 
@@ -12758,6 +12758,7 @@ assinala_Menu	endp
 ; Assinala caracter no menu no ecran	
 
 assinala_Nomes	PROC
+		
 		mov POSx, 18
 		mov POSy, 3
 
@@ -12848,22 +12849,24 @@ START:
 		jmp 	LER_SETA
 
 POS_NOME1:
-
+	 
 	 mov ax, 0B800h ; mem.video
      mov es, ax
 
 	 mov si, 516  ; origem (03,18)
      mov di, 0 ; destino (12,40)
-     ;mov cx, 13
+     mov cx, 9
 	 jmp BUSCA_NOME1
 
 BUSCA_NOME1:
+	 mov al, 0
 	 mov al, es:[si] ; ler letra
-	 cmp al, 32
-	 jne GUARDA1
+	 ;cmp al, 32
+	 ;jne GUARDA1
+	 jmp GUARDA1
 	 mov nomeJ1[di+1], '$'
-     jmp LER_SETA
-     
+    ; jmp LER_SETA
+     jmp POSE_NOME1
 GUARDA1:
 	mov nomeJ1[di], al
      ;mov ah, es:[si+1] ; atributo
@@ -12872,21 +12875,21 @@ GUARDA1:
     add si, 2
     add di, 1
 	loop BUSCA_NOME1
-;POSE_NOME1:
-;	 mov di, 0  ; origem (03,18)
- ;    mov si, 1494 ; destino (09,27)
-	 ;mov cx, 13
-;	 jmp ESCREVE_NOME1
+POSE_NOME1:
+	 mov di, 0  ; origem (03,18)
+     mov si, 1494 ; destino (09,27)
+	 mov cx, 13
+	 jmp ESCREVE_NOME1
 
-;ESCREVE_NOME1:
-;	 mov al, nomeJ1[di]
-;	 cmp al, '$'
-;	 je LER_SETA
- ;    mov es:[si], al
-  ;   mov byte ptr es:[si+1], 00000010b
-   ;  add si, 2
-    ; add di, 1
-     ;loop ESCREVE_NOME1
+ESCREVE_NOME1:
+	 mov al, nomeJ1[di]
+	 ;cmp al, '$'
+	 ;je LER_SETA
+   mov es:[si], al
+    mov byte ptr es:[si+1], 00000010b
+     add si, 2
+     add di, 1
+     loop ESCREVE_NOME1
 
 
 POS_NOME2:
@@ -12904,7 +12907,8 @@ BUSCA_NOME2:
 	 cmp al, 32
 	 jne GUARDA2
 	 mov nomeJ2[di+1], '$'
-     jmp LER_SETA
+     ;jmp LER_SETA
+	 jmp POSE_NOME2
      
 GUARDA2:
 	mov nomeJ2[di], al
@@ -12914,21 +12918,21 @@ GUARDA2:
     add si, 2
     add di, 1
 	loop BUSCA_NOME2
-;POSE_NOME2:
-;	 mov di, 0  ; origem (03,18)
- ;    mov si, 1654 ; destino (09,27)
+POSE_NOME2:
+	 mov di, 0  ; origem (03,18)
+    mov si, 1654 ; destino (09,27)
 	 ;mov cx, 13
-;	 jmp ESCREVE_NOME2
+	 jmp ESCREVE_NOME2
 
-;ESCREVE_NOME2:
-;	 mov al, nomeJ2[di]
-;	 cmp al, '$'
-;	 je LER_SETA
- ;    mov es:[si], al
-  ;   mov byte ptr es:[si+1], 00000010b
-   ;  add si, 2
-    ; add di, 1
-     ;loop ESCREVE_NOME2
+ESCREVE_NOME2:
+	 mov al, nomeJ2[di]
+	 cmp al, '$'
+	 je LER_SETA
+     mov es:[si], al
+     mov byte ptr es:[si+1], 00000010b
+     add si, 2
+     add di, 1
+     loop ESCREVE_NOME2
 
 SAIR:
 		call 	apaga_ecran
@@ -12974,7 +12978,10 @@ POSE_NOME1:
 	 mov writeNome, 1
 	 xor si, si
 	 mov di, 0  ; contador
-	 mov si, 240 ; destino (01,40)
+	 mov lin, 1
+	 mov col, 40
+	 call posicao_ecra
+	 mov si, pos_ecra ; destino (01,40)
 	 ;mov cx, 13
 	 jmp ESCREVE_NOME1
 
@@ -12983,7 +12990,7 @@ ESCREVE_NOME1:
 	 cmp al, '$'
 	 je POSE_NOME2
      mov es:[si], al
-    ; mov byte ptr es:[si+1], 00000010b
+
      add si, 2
      add di, 1
      loop ESCREVE_NOME1
