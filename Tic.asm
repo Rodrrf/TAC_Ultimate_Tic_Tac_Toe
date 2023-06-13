@@ -12865,8 +12865,8 @@ BUSCA_NOME1:
 	 ;jne GUARDA1
 	 jmp GUARDA1
 	 mov nomeJ1[di+1], '$'
-    ; jmp LER_SETA
-     jmp POSE_NOME1
+     jmp LER_SETA
+
 GUARDA1:
 	mov nomeJ1[di], al
      ;mov ah, es:[si+1] ; atributo
@@ -12875,21 +12875,6 @@ GUARDA1:
     add si, 2
     add di, 1
 	loop BUSCA_NOME1
-POSE_NOME1:
-	 mov di, 0  ; origem (03,18)
-     mov si, 1494 ; destino (09,27)
-	 mov cx, 13
-	 jmp ESCREVE_NOME1
-
-ESCREVE_NOME1:
-	 mov al, nomeJ1[di]
-	 ;cmp al, '$'
-	 ;je LER_SETA
-   mov es:[si], al
-    mov byte ptr es:[si+1], 00000010b
-     add si, 2
-     add di, 1
-     loop ESCREVE_NOME1
 
 
 POS_NOME2:
@@ -12907,8 +12892,7 @@ BUSCA_NOME2:
 	 cmp al, 32
 	 jne GUARDA2
 	 mov nomeJ2[di+1], '$'
-     ;jmp LER_SETA
-	 jmp POSE_NOME2
+     jmp LER_SETA
      
 GUARDA2:
 	mov nomeJ2[di], al
@@ -12918,21 +12902,7 @@ GUARDA2:
     add si, 2
     add di, 1
 	loop BUSCA_NOME2
-POSE_NOME2:
-	 mov di, 0  ; origem (03,18)
-    mov si, 1654 ; destino (09,27)
-	 ;mov cx, 13
-	 jmp ESCREVE_NOME2
 
-ESCREVE_NOME2:
-	 mov al, nomeJ2[di]
-	 cmp al, '$'
-	 je LER_SETA
-     mov es:[si], al
-     mov byte ptr es:[si+1], 00000010b
-     add si, 2
-     add di, 1
-     loop ESCREVE_NOME2
 
 SAIR:
 		call 	apaga_ecran
@@ -13024,13 +12994,6 @@ LER_SETA:
 			JE		fima
 			cmp 	al, 13      ; ENTER
 			je 		ASSINALA_JOGADA
-			;goto_xy	POSx,POSy 	; verifica se pode escrever o caracter no ecran
-			;mov		CL, Car
-			;cmp		CL, 32		; Só escreve se for espaço em branco
-			;JNE 	LER_SETA
-			;mov		ah, 02h		; coloca o caracter lido no ecra
-			;mov		dl, al
-			;int		21H	
 			goto_xy	POSx,POSy
 			
 			jmp		LER_SETA
@@ -13351,15 +13314,6 @@ ESQUERDA:
 			je		configEsq_tc2
 			cmp 	n_tab, 9
 			je		configEsq_tc3						
-			;cmp 	POSx, 4			;NAO DEIXA PASSAR AS MARGENS DO TABULEIRO GRANDE
-			;jbe		RETURNESQ_c1
-			;cmp 	POSx, 11
-			;je		RETURNESQ_c2
-			;cmp 	POSx, 20
-			;je		RETURNESQ_c3
-			;cmp 	POSx, 26
-			;jae		RETURNESQ_c4
-			;jmp		CICLO
 
 
 configEsq_tc1:					;Não sai pela esquerda do tabuleiro 
